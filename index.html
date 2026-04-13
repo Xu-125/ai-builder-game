@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt 大师测试 · AI predy 分享会</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'PingFang SC', sans-serif;
+    background: #0a0a0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+
+  /* 背景粒子 */
+  .bg {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse at 20% 50%, #1a0533 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, #0d1f3c 0%, transparent 60%),
+                radial-gradient(ellipse at 60% 80%, #0f2010 0%, transparent 60%);
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 600px;
+    padding: 24px 20px;
+  }
+
+  /* 顶部标题 */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff2d55, #ff6b35);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.3;
+  }
+  .header p {
+    margin-top: 8px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* 输入区 */
+  .input-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(10px);
+  }
+  .input-label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 10px;
+  }
+  .prompt-input {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: #fff;
+    font-size: 15px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+    min-height: 80px;
+  }
+  .prompt-input::placeholder { color: rgba(255,255,255,0.3); }
+  .prompt-input:focus { border-color: rgba(167,139,250,0.6); }
+
+  /* 示例标签 */
+  .examples {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 12px;
+  }
+  .example-tag {
+    background: rgba(167,139,250,0.1);
+    border: 1px solid rgba(167,139,250,0.25);
+    color: rgba(167,139,250,0.9);
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .example-tag:hover {
+    background: rgba(167,139,250,0.2);
+    border-color: rgba(167,139,250,0.5);
+  }
+
+  /* 按钮 */
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,58,237,0.4); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 结果卡 */
+  .result-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 16px;
+    display: none;
+    animation: slideUp 0.4s ease;
+  }
+  .result-card.show { display: block; }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 段位 */
+  .rank-display {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .rank-emoji { font-size: 56px; line-height: 1; margin-bottom: 8px; }
+  .rank-name {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .rank-sub { font-size: 13px; color: rgba(255,255,255,0.5); }
+
+  /* 分数条 */
+  .score-section { margin-bottom: 20px; }
+  .score-item { margin-bottom: 12px; }
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .score-label { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .score-val { font-size: 13px; font-weight: 700; }
+  .score-bar {
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    width: 0%;
+  }
+
+  /* 点评 */
+  .comment-box {
+    background: rgba(255,255,255,0.05);
+    border-left: 3px solid;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 16px;
+  }
+
+  /* 分享 */
+  .share-row {
+    display: flex; gap: 10px;
+  }
+  .share-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .share-btn:hover { background: rgba(255,255,255,0.12); }
+  .primary-btn {
+    background: linear-gradient(135deg, #7c3aed, #2563eb) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    font-weight: 700;
+  }
+  .primary-btn:hover { box-shadow: 0 4px 16px rgba(124,58,237,0.5); transform: translateY(-1px); }
+
+  .retry-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(167,139,250,0.3);
+    background: transparent;
+    color: rgba(167,139,250,0.9);
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .retry-btn:hover { background: rgba(167,139,250,0.1); }
+
+  /* 进度计数 */
+  .char-count {
+    text-align: right;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 6px;
+  }
+
+  /* 排行榜入口 */
+  .leaderboard-hint {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+  }
+  .leaderboard-hint a {
+    color: rgba(167,139,250,0.7);
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">🎮 AI predy 分享会</div>
+    <h1>Prompt 大师<br>段位测试</h1>
+    <p>输入一句 prompt，看看你是什么级别的 Vibe Coder</p>
+  </div>
+
+  <div class="input-card">
+    <div class="input-label">💬 输入你的 prompt：</div>
+    <textarea
+      class="prompt-input"
+      id="promptInput"
+      placeholder="例：帮我做一个有物理弹射效果的打砖块游戏，砖块碎裂时有粒子爆炸..."
+      maxlength="300"
+    ></textarea>
+    <div class="char-count"><span id="charCount">0</span> / 300</div>
+
+    <div class="examples">
+      <span class="example-tag" onclick="fillExample(this)">做一个打砖块游戏</span>
+      <span class="example-tag" onclick="fillExample(this)">帮我写一个登录页面</span>
+      <span class="example-tag" onclick="fillExample(this)">给薯队长做个大富翁</span>
+      <span class="example-tag" onclick="fillExample(this)">生成一段粒子动画</span>
+    </div>
+  </div>
+
+  <button class="btn" id="submitBtn" onclick="runEvaluate()">
+    开始测试段位 ⚡
+  </button>
+
+  <div class="result-card" id="resultCard">
+    <div class="rank-display">
+      <div class="rank-emoji" id="rankEmoji"></div>
+      <div class="rank-name" id="rankName"></div>
+      <div class="rank-sub" id="rankSub"></div>
+    </div>
+
+    <div class="score-section" id="scoreSection"></div>
+
+    <div class="comment-box" id="commentBox"></div>
+
+    <div class="share-row">
+      <button class="share-btn" id="cardBtn" onclick="generateCard()">✨ 生成分享卡</button>
+      <button class="share-btn primary-btn" onclick="goSignup()">🚀 报名分享会</button>
+    </div>
+    <button class="retry-btn" onclick="retry()">🔄 换一个 prompt 再测</button>
+  </div>
+
+  <!-- 分享卡弹窗 -->
+  <div id="cardModal" style="
+    display:none; position:fixed; inset:0; z-index:1000;
+    background:rgba(0,0,0,0.85); backdrop-filter:blur(8px);
+    align-items:center; justify-content:center; flex-direction:column;
+    padding:20px;
+  ">
+    <div style="font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:12px;">
+      📱 长按图片保存 / 右键另存为
+    </div>
+    <img id="cardImg" style="
+      max-width:100%; max-height:75vh;
+      border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.6);
+    "/>
+    <div style="display:flex; gap:12px; margin-top:16px;">
+      <button onclick="downloadCard()" style="
+        padding:10px 24px; border-radius:10px; border:none;
+        background:linear-gradient(135deg,#7c3aed,#2563eb);
+        color:#fff; font-size:14px; font-weight:700; cursor:pointer;
+        font-family:inherit;
+      ">⬇ 下载图片</button>
+      <button onclick="closeCard()" style="
+        padding:10px 24px; border-radius:10px;
+        border:1px solid rgba(255,255,255,0.2);
+        background:transparent; color:rgba(255,255,255,0.7);
+        font-size:14px; cursor:pointer; font-family:inherit;
+      ">关闭</button>
+    </div>
+    <div style="margin-top:12px; font-size:12px; color:rgba(255,255,255,0.3);">
+      截图发到评论区，有机会赢奖品 🎁
+    </div>
+  </div>
+
+  <div class="leaderboard-hint">
+    期待你的 Vibe ✨ &nbsp;
+    <a href="https://city.xiaohongshu.com/questionnaire/1775032697489" target="_blank">立即报名 AI predy 分享会 →</a>
+  </div>
+</div>
+
+<script>
+// 段位配置
+const RANKS = [
+  {
+    min: 90, emoji: '🔥', name: 'Vibe 大神',
+    color: '#ff6b35',
+    sub: '你已经超越了 99% 的普通用户',
+    barColor: 'linear-gradient(90deg, #ff6b35, #ff2d55)'
+  },
+  {
+    min: 75, emoji: '⚡', name: 'Prompt 工程师',
+    color: '#a78bfa',
+    sub: '专业级别，稳稳上线没问题',
+    barColor: 'linear-gradient(90deg, #7c3aed, #a78bfa)'
+  },
+  {
+    min: 58, emoji: '🚀', name: '进阶 Coder',
+    color: '#38bdf8',
+    sub: '思路清晰，再加点细节就满分',
+    barColor: 'linear-gradient(90deg, #0284c7, #38bdf8)'
+  },
+  {
+    min: 40, emoji: '🌱', name: '潜力新星',
+    color: '#4ade80',
+    sub: '有想法，继续打磨就能起飞',
+    barColor: 'linear-gradient(90deg, #16a34a, #4ade80)'
+  },
+  {
+    min: 0, emoji: '🐣', name: '青铜 Coder',
+    color: '#fbbf24',
+    sub: '万事开头难，来分享会就对了',
+    barColor: 'linear-gradient(90deg, #d97706, #fbbf24)'
+  }
+];
+
+// 评分维度
+const DIMENSIONS = [
+  { key: 'clarity',    label: '指令清晰度', weight: 0.30 },
+  { key: 'detail',     label: '细节丰富度', weight: 0.25 },
+  { key: 'creativity', label: '创意指数',   weight: 0.25 },
+  { key: 'vibe',       label: 'Vibe 感',    weight: 0.20 },
+];
+
+// 评论库（按总分区间）
+const COMMENTS = {
+  high: [
+    '细节拉满，AI 收到这条 prompt 会当场感动落泪。粒子、物理、动效全有，上线不是梦。',
+    '这条 prompt 已经具备"工程思维"——你不只是在描述需求，你在定义边界。分享会见！',
+    '看完这条 prompt，我觉得你已经不需要来分享会了。但还是来吧，认识一下志同道合的人。',
+  ],
+  mid: [
+    '方向对了，细节还差一口气。加上"物理效果""性能要求"或"具体风格"，AI 会给你惊喜。',
+    '有想法有场景，就是描述还有点抽象。AI 最怕模糊——具体到"什么感觉""什么效果"。',
+    '不错的 prompt，但 AI 需要更多"约束"才能给你想要的结果。试试加上尺寸、颜色、交互细节。',
+  ],
+  low: [
+    'AI 看完这条 prompt 陷入了沉思……它不知道该从哪下手。来分享会学学怎么"喂"好 AI。',
+    '这条 prompt 让 AI 开始自由发挥了，结果可能和你想的完全不一样。具体化是关键！',
+    '好消息：你有想法。坏消息：AI 不会读心术。来分享会，学会把想法翻译成 prompt。',
+  ]
+};
+
+// 关键词评分规则
+function scorePrompt(text) {
+  const t = text.trim();
+  const len = t.length;
+
+  // 清晰度：有没有明确的目标
+  const hasVerb = /做|生成|创建|写|设计|实现|帮我|给我/.test(t);
+  const hasNoun = /游戏|页面|动画|效果|组件|界面|功能|系统/.test(t);
+  let clarity = 30;
+  if (hasVerb) clarity += 25;
+  if (hasNoun) clarity += 25;
+  if (len > 30) clarity += 10;
+  if (len > 80) clarity += 10;
+  clarity = Math.min(clarity, 100);
+
+  // 细节丰富度：修饰词、具体参数
+  const detailWords = /粒子|物理|弹射|碎裂|颜色|大小|速度|动效|渐变|阴影|圆角|响应式|移动端|流畅|丝滑|炫酷|简洁|极简/.test(t);
+  const hasNumber = /\d+/.test(t);
+  const hasPunctuation = t.length > 50;
+  let detail = 20;
+  if (detailWords) detail += 40;
+  if (hasNumber) detail += 20;
+  if (hasPunctuation) detail += 15;
+  if (len > 100) detail += 5;
+  detail = Math.min(detail, 100);
+
+  // 创意指数：有没有有趣的想法
+  const creativeWords = /薯队长|大富翁|打砖块|跑酷|消消乐|弹幕|烟花|随机|procedural|vibe|魔法|科技感|赛博|像素|复古/.test(t);
+  const hasComma = t.includes('，') || t.includes(',');
+  let creativity = 25;
+  if (creativeWords) creativity += 45;
+  if (hasComma) creativity += 15;
+  if (len > 60) creativity += 15;
+  creativity = Math.min(creativity, 100);
+
+  // Vibe 感：语气和态度
+  const vibeWords = /牛逼|炸裂|爆炸|超酷|惊艳|漂亮|完美|绝了|有意思|好玩|有趣|感动|震撼/.test(t);
+  const casual = /吧|呢|哦|～|！|!/.test(t);
+  let vibe = 30;
+  if (vibeWords) vibe += 35;
+  if (casual) vibe += 20;
+  if (len > 50) vibe += 15;
+  vibe = Math.min(vibe, 100);
+
+  // 加一点随机浮动（±8），让重复测试有变化感
+  const jitter = () => Math.round((Math.random() - 0.5) * 16);
+
+  return {
+    clarity:    Math.min(100, Math.max(10, clarity + jitter())),
+    detail:     Math.min(100, Math.max(10, detail + jitter())),
+    creativity: Math.min(100, Math.max(10, creativity + jitter())),
+    vibe:       Math.min(100, Math.max(10, vibe + jitter())),
+  };
+}
+
+function totalScore(scores) {
+  return Math.round(
+    DIMENSIONS.reduce((sum, d) => sum + scores[d.key] * d.weight, 0)
+  );
+}
+
+function getRank(score) {
+  return RANKS.find(r => score >= r.min);
+}
+
+function getComment(score) {
+  const pool = score >= 75 ? COMMENTS.high : score >= 45 ? COMMENTS.mid : COMMENTS.low;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// 模拟"加载中"
+function fakeLoading(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+let lastResult = null;
+
+async function runEvaluate() {
+  const input = document.getElementById('promptInput');
+  const text = input.value.trim();
+  if (!text || text.length < 5) {
+    input.focus();
+    input.style.borderColor = 'rgba(255,80,80,0.6)';
+    setTimeout(() => input.style.borderColor = '', 1000);
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>AI 正在评估你的 Prompt...';
+
+  // 隐藏旧结果
+  document.getElementById('resultCard').classList.remove('show');
+
+  await fakeLoading(1400 + Math.random() * 600);
+
+  // 计算分数
+  const scores = scorePrompt(text);
+  const total = totalScore(scores);
+  const rank = getRank(total);
+  const comment = getComment(total);
+
+  lastResult = { text, scores, total, rank, comment };
+  renderResult(lastResult);
+
+  btn.disabled = false;
+  btn.innerHTML = '开始测试段位 ⚡';
+}
+
+function renderResult({ scores, total, rank, comment }) {
+  document.getElementById('rankEmoji').textContent = rank.emoji;
+  document.getElementById('rankName').textContent = rank.name;
+  document.getElementById('rankName').style.color = rank.color;
+  document.getElementById('rankSub').textContent = `总分 ${total} 分 · ${rank.sub}`;
+
+  // 渲染分数条
+  const section = document.getElementById('scoreSection');
+  section.innerHTML = DIMENSIONS.map(d => {
+    const val = scores[d.key];
+    return `
+      <div class="score-item">
+        <div class="score-row">
+          <span class="score-label">${d.label}</span>
+          <span class="score-val" style="color:${rank.color}">${val}</span>
+        </div>
+        <div class="score-bar">
+          <div class="score-fill" id="fill_${d.key}" style="background:${rank.barColor}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 点评
+  const commentBox = document.getElementById('commentBox');
+  commentBox.textContent = comment;
+  commentBox.style.borderColor = rank.color;
+
+  // 显示结果
+  const card = document.getElementById('resultCard');
+  card.classList.add('show');
+
+  // 动画填充
+  setTimeout(() => {
+    DIMENSIONS.forEach(d => {
+      const el = document.getElementById(`fill_${d.key}`);
+      if (el) el.style.width = scores[d.key] + '%';
+    });
+  }, 100);
+
+  // 滚动到结果
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function retry() {
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('promptInput').value = '';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('promptInput').focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function fillExample(el) {
+  const input = document.getElementById('promptInput');
+  input.value = el.textContent;
+  document.getElementById('charCount').textContent = el.textContent.length;
+  input.focus();
+}
+
+function copyResult() {
+  if (!lastResult) return;
+  const text = `🎮 Prompt 大师测试结果
+段位：${lastResult.rank.emoji} ${lastResult.rank.name}（${lastResult.total}分）
+Prompt：${lastResult.text}
+${lastResult.comment}
+
+期待你的 Vibe ✨ 报名 AI predy 分享会 →
+https://city.xiaohongshu.com/questionnaire/1775032697489`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制结果', 2000);
+  });
+}
+
+// 二维码 base64（报名链接）
+const QR_B64 = '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';
+
+function generateCard() {
+  if (!lastResult) return;
+  const btn = document.getElementById('cardBtn');
+  btn.textContent = '⏳ 生成中...';
+  btn.disabled = true;
+
+  const qrImg = new Image();
+  qrImg.onload = () => {
+    try {
+      const dataUrl = drawCard(lastResult, qrImg);
+      document.getElementById('cardImg').src = dataUrl;
+      document.getElementById('cardImg').dataset.url = dataUrl;
+      document.getElementById('cardModal').style.display = 'flex';
+    } catch(e) {
+      console.error(e);
+      alert('生成失败，请截图保存 😅');
+    }
+    btn.textContent = '✨ 生成分享卡';
+    btn.disabled = false;
+  };
+  qrImg.onerror = () => {
+    btn.textContent = '✨ 生成分享卡';
+    btn.disabled = false;
+    alert('二维码加载失败');
+  };
+  qrImg.src = 'data:image/png;base64,' + QR_B64;
+}
+
+// ── 分享卡：原页面深色科技风，竖版 ──
+function drawCard(result, qrImg) {
+  const { rank, total, scores, text, comment } = result;
+
+  const LW = 750, LH = 1120, DPR = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = LW * DPR; canvas.height = LH * DPR;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  const PAD = 40;
+  const F = '"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif';
+
+  // 段位对应主色（用于光晕、进度条、高亮）
+  const PAL = {
+    '#ff6b35': { glow:'#FF2442', bar:'#FF6B35', accent:'#ff6b35' },
+    '#a78bfa': { glow:'#7C3AED', bar:'#A78BFA', accent:'#a78bfa' },
+    '#38bdf8': { glow:'#0EA5E9', bar:'#38BDF8', accent:'#38bdf8' },
+    '#4ade80': { glow:'#16A34A', bar:'#4ADE80', accent:'#4ade80' },
+    '#fbbf24': { glow:'#F59E0B', bar:'#FBBF24', accent:'#fbbf24' },
+  };
+  const p = PAL[rank.color] || PAL['#a78bfa'];
+
+  // ══ 背景：深黑色，匹配原页面 #0a0a0f ══
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, LW, LH);
+
+  // ══ 背景光晕（模拟原页面 radial-gradient 氛围）══
+  // 左上：紫色光晕
+  const g1 = ctx.createRadialGradient(LW * 0.2, LH * 0.18, 0, LW * 0.2, LH * 0.18, 340);
+  g1.addColorStop(0, 'rgba(26,5,51,0.85)');
+  g1.addColorStop(1, 'rgba(10,10,15,0)');
+  ctx.fillStyle = g1; ctx.fillRect(0, 0, LW, LH);
+
+  // 右上：蓝色光晕
+  const g2 = ctx.createRadialGradient(LW * 0.85, LH * 0.12, 0, LW * 0.85, LH * 0.12, 280);
+  g2.addColorStop(0, 'rgba(13,31,60,0.8)');
+  g2.addColorStop(1, 'rgba(10,10,15,0)');
+  ctx.fillStyle = g2; ctx.fillRect(0, 0, LW, LH);
+
+  // 中下：段位主色光晕
+  const g3 = ctx.createRadialGradient(LW * 0.6, LH * 0.72, 0, LW * 0.6, LH * 0.72, 300);
+  g3.addColorStop(0, hexToRgba(p.glow, 0.18));
+  g3.addColorStop(1, 'rgba(10,10,15,0)');
+  ctx.fillStyle = g3; ctx.fillRect(0, 0, LW, LH);
+
+  // ══ 顶部标签行 ══
+  // LIVE 红色 badge
+  const badgeGrad = ctx.createLinearGradient(PAD, 0, PAD + 120, 0);
+  badgeGrad.addColorStop(0, '#ff2d55');
+  badgeGrad.addColorStop(1, '#ff6b35');
+  roundRect(ctx, PAD, 28, 130, 26, 13);
+  ctx.fillStyle = badgeGrad; ctx.fill();
+  ctx.font = `bold 11px ${F}`;
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.fillText('🎮 AI predy 分享会', PAD + 65, 45);
+
+  // 右侧日期标签
+  ctx.font = `12px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.textAlign = 'right';
+  ctx.fillText('Prompt 段位测试', LW - PAD, 44);
+
+  // ══ 主标题区 ══
+  // 大 emoji
+  ctx.font = '80px serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(rank.emoji, PAD, 170);
+
+  // 段位名：渐变色文字（白→段位色）
+  ctx.font = `bold 52px ${F}`;
+  const titleGrad = ctx.createLinearGradient(PAD, 180, PAD + 400, 230);
+  titleGrad.addColorStop(0, '#ffffff');
+  titleGrad.addColorStop(0.5, p.accent);
+  titleGrad.addColorStop(1, p.bar);
+  ctx.fillStyle = titleGrad;
+  ctx.fillText(rank.name, PAD, 228);
+
+  // 分数 + 副标题
+  ctx.font = `bold 16px ${F}`;
+  ctx.fillStyle = p.accent;
+  ctx.fillText(`${total} 分`, PAD, 262);
+  ctx.font = `14px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.fillText(rank.sub, PAD + 52, 262);
+
+  // ══ 四维数据区（半透明深色卡片）══
+  const CARD_Y = 290;
+  const CARD_H = 210;
+  roundRect(ctx, PAD, CARD_Y, LW - PAD*2, CARD_H, 20);
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth = 1; ctx.stroke();
+
+  const GX = [PAD + 28, PAD + 28 + (LW - PAD*2) / 2];
+  const GY = [CARD_Y + 36, CARD_Y + 36 + 92];
+  DIMENSIONS.forEach((d, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = GX[col], y = GY[row];
+    const val = scores[d.key];
+    const bw = (LW - PAD*2) / 2 - 56;
+
+    // 数值（段位主色）
+    ctx.font = `bold 30px ${F}`;
+    ctx.fillStyle = p.accent;
+    ctx.textAlign = 'left';
+    ctx.fillText(val, x, y + 28);
+
+    // 标签
+    ctx.font = `12px ${F}`;
+    ctx.fillStyle = 'rgba(255,255,255,0.40)';
+    ctx.fillText(d.label, x + 48, y + 14);
+
+    // 进度条底
+    roundRect(ctx, x + 48, y + 22, bw, 5, 2.5);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fill();
+    // 进度条高亮
+    const barGrad = ctx.createLinearGradient(x + 48, 0, x + 48 + bw, 0);
+    barGrad.addColorStop(0, p.bar);
+    barGrad.addColorStop(1, p.accent);
+    roundRect(ctx, x + 48, y + 22, Math.max(8, bw * val / 100), 5, 2.5);
+    ctx.fillStyle = barGrad; ctx.fill();
+  });
+
+  // ══ Prompt 区 ══
+  const PY = CARD_Y + CARD_H + 28;
+
+  ctx.font = `bold 13px ${F}`;
+  ctx.fillStyle = p.accent;
+  ctx.textAlign = 'left';
+  ctx.fillText('我的 Prompt', PAD, PY);
+
+  // 左色条（段位主色，带发光感）
+  const barG = ctx.createLinearGradient(0, PY + 10, 0, PY + 86);
+  barG.addColorStop(0, p.bar);
+  barG.addColorStop(1, hexToRgba(p.bar, 0.2));
+  ctx.fillStyle = barG;
+  ctx.fillRect(PAD, PY + 10, 3, 76);
+
+  ctx.font = `15px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.80)';
+  const pLines = wrapText(ctx, text, LW - PAD*2 - 24);
+  pLines.slice(0, 3).forEach((line, i) => {
+    ctx.fillText(line, PAD + 16, PY + 34 + i * 26);
+  });
+
+  // ══ 点评区 ══
+  const CY = PY + 106;
+
+  // 半透明深色背景块，左边带段位色侧边条
+  roundRect(ctx, PAD, CY, LW - PAD*2, 128, 16);
+  ctx.fillStyle = hexToRgba(p.glow, 0.12); ctx.fill();
+  ctx.strokeStyle = hexToRgba(p.accent, 0.25); ctx.lineWidth = 1; ctx.stroke();
+
+  // 左侧色条
+  ctx.fillStyle = p.bar;
+  roundRect(ctx, PAD, CY, 3, 128, 2); ctx.fill();
+
+  ctx.font = `bold 13px ${F}`;
+  ctx.fillStyle = p.accent;
+  ctx.textAlign = 'left';
+  ctx.fillText('AI 点评', PAD + 18, CY + 24);
+
+  ctx.font = `14px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  const cLines = wrapText(ctx, comment, LW - PAD*2 - 44);
+  cLines.slice(0, 3).forEach((line, i) => {
+    ctx.fillText(line, PAD + 18, CY + 50 + i * 26);
+  });
+
+  // ══ 底部：分割线 + 二维码 ══
+  const BY = CY + 152;
+
+  // 渐变分割线
+  const divG = ctx.createLinearGradient(PAD, 0, LW - PAD, 0);
+  divG.addColorStop(0, 'rgba(255,255,255,0)');
+  divG.addColorStop(0.3, hexToRgba(p.accent, 0.4));
+  divG.addColorStop(0.7, hexToRgba(p.accent, 0.4));
+  divG.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.strokeStyle = divG; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, BY); ctx.lineTo(LW - PAD, BY); ctx.stroke();
+
+  // 左侧文案
+  ctx.font = `bold 20px ${F}`;
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'left';
+  ctx.fillText('来分享会，一起 Vibe ✨', PAD, BY + 46);
+
+  ctx.font = `13px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.fillText('扫码报名 AI predy 分享会', PAD, BY + 72);
+  ctx.fillText('截图发评论区有机会赢奖品 🎁', PAD, BY + 94);
+
+  // 右侧二维码（白底卡片包裹，增加可读性）
+  const qrSize = 120;
+  const qrX = LW - PAD - qrSize;
+  const qrY2 = BY + 20;
+  roundRect(ctx, qrX - 8, qrY2 - 8, qrSize + 16, qrSize + 16, 12);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.strokeStyle = hexToRgba(p.accent, 0.5); ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.drawImage(qrImg, qrX, qrY2, qrSize, qrSize);
+
+  // ══ 最底部署名 ══
+  ctx.font = `11px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.20)';
+  ctx.textAlign = 'center';
+  ctx.fillText('小红书 AI predy 分享会', LW / 2, LH - 18);
+
+  return canvas.toDataURL('image/png');
+}
+
+// 工具：hex 转 rgba
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// 工具：圆角矩形路径
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// 工具：文字换行
+function wrapText(ctx, text, maxWidth) {
+  const lines = [], chars = text.split('');
+  let line = '';
+  for (const c of chars) {
+    const test = line + c;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line); line = c;
+    } else { line = test; }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function downloadCard() {
+  const url = document.getElementById('cardImg').dataset.url;
+  if (!url) return;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ai-predy-prompt-rank.png';
+  a.click();
+}
+
+function closeCard() {
+  document.getElementById('cardModal').style.display = 'none';
+}
+
+document.getElementById('cardModal').addEventListener('click', function(e) {
+  if (e.target === this) closeCard();
+});
+
+function goSignup() {
+  window.open('https://city.xiaohongshu.com/questionnaire/1775032697489', '_blank');
+}
+
+// 字符计数
+document.getElementById('promptInput').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length;
+});
+
+// 回车提交
+document.getElementById('promptInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.metaKey) runEvaluate();
+});
+</script>
+</body>
+</html>
