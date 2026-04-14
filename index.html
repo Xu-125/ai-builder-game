@@ -261,7 +261,8 @@
 </div>
 <script>
 // ⚙️ 后端地址 — 改成你实际部署的地址
-const SHARE_API_BASE = 'https://every-heads-glow.loca.lt';
+const SUPABASE_URL = 'https://hwsgawbvpkizpgwoybme.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3c2dhd2J2cGtpenBnd295Ym1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjU1NzgsImV4cCI6MjA5MTc0MTU3OH0.6AveHSFyHlBprWFaKp112TElHpdVQHXCx5rFOc2KUmw';
 
 const RANKS = [
   { min:90, emoji:'🔥', name:'Vibe 大神', color:'#ff6b35', sub:'你已经超越了 99% 的普通用户', barColor:'linear-gradient(90deg, #ff6b35, #ff2d55)' },
@@ -439,9 +440,11 @@ async function wallLogin() {
 async function checkWallPosted() {
   if (!wallUser) return;
   try {
-    const res = await fetch(SHARE_API_BASE + '/api/wall');
+    const res = await fetch(SUPABASE_URL + '/rest/v1/wall_posts?select=user_id&order=created_at.desc', {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
     const data = await res.json();
-    if (data.ok && data.data.some(w => w.userId === wallUser.userId)) {
+    if (Array.isArray(data) && data.some(w => w.user_id === wallUser.userId)) {
       document.getElementById('wallPostBtn').style.display = 'none';
       document.getElementById('wallPostedHint').classList.add('show');
     } else {
@@ -466,20 +469,27 @@ async function postToWall() {
   btn.textContent = '发送中...'; btn.disabled = true;
   try {
     const scoresArr = DIMENSIONS.map(d => ({ label: d.label, value: lastResult.scores[d.key] }));
-    const res = await fetch(SHARE_API_BASE + '/api/wall', {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/wall_posts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Prefer': 'return=representation'
+      },
       body: JSON.stringify({
-        text: lastResult.text, scores: scoresArr,
-        total: lastResult.total, rank: lastResult.rank, comment: lastResult.comment,
-        // 前端传来的 Hi 用户信息
-        hiUserId: wallUser.userId,
-        hiNickName: wallUser.nickname,
-        hiAvatar: wallUser.avatar || ''
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        nickname: wallUser.nickname,
+        user_id: wallUser.userId,
+        avatar: wallUser.avatar || '',
+        prompt_text: lastResult.text,
+        scores: scoresArr,
+        total: lastResult.total,
+        rank: lastResult.rank,
+        created_at: new Date().toISOString()
       })
     });
-    const data = await res.json();
-    if (data.ok) {
+    if (res.ok) {
       btn.style.display = 'none';
       document.getElementById('wallPostedHint').classList.add('show');
       loadWall();
@@ -523,9 +533,23 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 
 async function loadWall() {
   try {
-    const res = await fetch(SHARE_API_BASE + '/api/wall');
+    const res = await fetch(SUPABASE_URL + '/rest/v1/wall_posts?order=created_at.desc', {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    });
     const data = await res.json();
-    if (data.ok) renderWall(data.data);
+    if (Array.isArray(data)) {
+      const wallData = data.map(d => ({
+        nickname: d.nickname || '匿名用户',
+        userId: d.user_id || '',
+        avatar: d.avatar || '',
+        text: d.prompt_text || '',
+        scores: d.scores || [],
+        total: d.total || 0,
+        rank: d.rank || {},
+        time: d.created_at ? new Date(d.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'}) : ''
+      }));
+      renderWall(wallData);
+    }
   } catch(e) {
     document.getElementById('wallGrid').innerHTML = '<div class="wall-empty">加载失败，请稍后重试</div>';
   }
