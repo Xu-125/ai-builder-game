@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt 大师测试 · AI predy 分享会</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'PingFang SC', sans-serif;
+    background: #0a0a0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+  .bg {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse at 20% 50%, #1a0533 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, #0d1f3c 0%, transparent 60%),
+                radial-gradient(ellipse at 60% 80%, #0f2010 0%, transparent 60%);
+  }
+  .container {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 600px;
+    padding: 24px 20px;
+  }
+  .header { text-align: center; margin-bottom: 32px; }
+  .header .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff2d55, #ff6b35);
+    color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; padding: 4px 12px;
+    border-radius: 20px; margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 28px; font-weight: 800;
+    background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #38bdf8 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1.3;
+  }
+  .header p { margin-top: 8px; font-size: 14px; color: rgba(255,255,255,0.5); }
+  .input-card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 20px; margin-bottom: 16px;
+    backdrop-filter: blur(10px);
+  }
+  .input-label { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 10px; }
+  .prompt-input {
+    width: 100%; background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+    padding: 14px 16px; color: #fff; font-size: 15px;
+    font-family: inherit; resize: none; outline: none;
+    transition: border-color 0.2s; min-height: 80px;
+  }
+  .prompt-input::placeholder { color: rgba(255,255,255,0.3); }
+  .prompt-input:focus { border-color: rgba(167,139,250,0.6); }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .example-tag {
+    background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.25);
+    color: rgba(167,139,250,0.9); font-size: 12px; padding: 5px 10px;
+    border-radius: 20px; cursor: pointer; transition: all 0.2s;
+  }
+  .example-tag:hover { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); }
+  .btn {
+    width: 100%; padding: 16px; border-radius: 12px; border: none;
+    font-size: 16px; font-weight: 700; font-family: inherit;
+    cursor: pointer; transition: all 0.2s;
+    background: linear-gradient(135deg, #7c3aed, #2563eb); color: #fff;
+    position: relative; overflow: hidden;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,58,237,0.4); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    margin-right: 8px; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result-card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 24px; margin-top: 16px;
+    display: none; animation: slideUp 0.4s ease;
+  }
+  .result-card.show { display: block; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .rank-display { text-align: center; margin-bottom: 20px; }
+  .rank-emoji { font-size: 56px; line-height: 1; margin-bottom: 8px; }
+  .rank-name { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .rank-sub { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .score-section { margin-bottom: 20px; }
+  .score-item { margin-bottom: 12px; }
+  .score-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .score-label { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .score-val { font-size: 13px; font-weight: 700; }
+  .score-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); width: 0%; }
+  .comment-box {
+    background: rgba(255,255,255,0.05); border-left: 3px solid;
+    border-radius: 0 8px 8px 0; padding: 12px 14px;
+    font-size: 14px; line-height: 1.7; color: rgba(255,255,255,0.85);
+    margin-bottom: 16px;
+  }
+  .share-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .share-btn {
+    flex: 1; padding: 11px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8);
+    font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.2s;
+    min-width: 0;
+  }
+  .share-btn:hover { background: rgba(255,255,255,0.12); }
+  .primary-btn {
+    background: linear-gradient(135deg, #7c3aed, #2563eb) !important;
+    border-color: transparent !important; color: #fff !important; font-weight: 700;
+  }
+  .primary-btn:hover { box-shadow: 0 4px 16px rgba(124,58,237,0.5); transform: translateY(-1px); }
+  .share-green {
+    background: linear-gradient(135deg, #00A14B, #00C853) !important;
+    border-color: transparent !important; color: #fff !important; font-weight: 700;
+  }
+  .share-green:hover { box-shadow: 0 4px 16px rgba(0,161,75,0.5); transform: translateY(-1px); }
+  .retry-btn {
+    width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px;
+    border: 1px solid rgba(167,139,250,0.3); background: transparent;
+    color: rgba(167,139,250,0.9); font-size: 14px; font-family: inherit;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .retry-btn:hover { background: rgba(167,139,250,0.1); }
+  .char-count { text-align: right; font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 6px; }
+  .leaderboard-hint { text-align: center; margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.3); }
+  .leaderboard-hint a { color: rgba(167,139,250,0.7); text-decoration: none; }
+  /* 结果墙 */
+  .result-wall { margin-top:32px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.1); }
+  .wall-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .wall-header h3 { font-size:16px; font-weight:700; }
+  .wall-count { font-size:13px; color:rgba(255,255,255,0.4); }
+  .wall-login-area { display:flex; gap:10px; margin-bottom:16px; align-items:center; }
+  .hi-login-btn {
+    padding:8px 16px; border-radius:8px; border:none;
+    background:linear-gradient(135deg,#ff2d55,#ff6b35);
+    color:#fff; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+    transition:all 0.2s; white-space:nowrap;
+  }
+  .hi-login-btn:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(255,45,85,0.4); }
+  .wall-post-btn {
+    padding:8px 16px; border-radius:8px; border:none;
+    background:linear-gradient(135deg,#00A14B,#00C853);
+    color:#fff; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+    transition:all 0.2s; display:none;
+  }
+  .wall-post-btn.show { display:inline-block; }
+  .wall-post-btn:hover { box-shadow:0 4px 16px rgba(0,161,75,0.5); transform:translateY(-1px); }
+  .wall-post-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .wall-user-badge { font-size:13px; color:rgba(255,255,255,0.6); display:none; }
+  .wall-user-badge.show { display:inline; }
+  .wall-grid { display:flex; flex-direction:column; gap:14px; }
+  .wall-card {
+    padding:16px; background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08); border-radius:14px;
+    transition:all 0.2s;
+  }
+  .wall-card:hover { background:rgba(255,255,255,0.06); }
+  .wall-card-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .wall-card-avatar {
+    width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0;
+    background:linear-gradient(135deg,#7c3aed,#2563eb);
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+  }
+  .wall-card-avatar img { width:100%; height:100%; object-fit:cover; }
+  .wall-card-name { font-size:14px; font-weight:600; color:rgba(255,255,255,0.85); }
+  .wall-card-time { font-size:11px; color:rgba(255,255,255,0.3); margin-left:auto; }
+  .wall-card-rank { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .wall-card-rank-emoji { font-size:24px; }
+  .wall-card-rank-name { font-size:15px; font-weight:700; }
+  .wall-card-rank-total { font-size:13px; color:rgba(255,255,255,0.5); margin-left:4px; }
+  .wall-card-prompt {
+    font-size:13px; line-height:1.6; color:rgba(255,255,255,0.6);
+    padding:10px 12px; background:rgba(255,255,255,0.04); border-radius:8px;
+    border-left:2px solid rgba(255,255,255,0.15);
+    margin-bottom:8px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box;
+    -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  }
+  .wall-card-scores { display:flex; gap:8px; flex-wrap:wrap; }
+  .wall-card-score {
+    font-size:11px; padding:3px 8px; border-radius:6px;
+    background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.5);
+  }
+  .wall-card-score span { font-weight:700; }
+  .wall-empty { text-align:center; padding:24px; color:rgba(255,255,255,0.3); font-size:13px; }
+  .wall-posted-hint {
+    text-align:center; padding:10px; font-size:13px;
+    color:rgba(0,161,75,0.8); background:rgba(0,161,75,0.1);
+    border-radius:8px; margin-bottom:14px; display:none;
+  }
+  .wall-posted-hint.show { display:block; }
+  .wall-rule {
+    text-align:center; padding:10px 14px; font-size:13px;
+    color:rgba(255,200,0,0.85); background:rgba(255,200,0,0.08);
+    border:1px solid rgba(255,200,0,0.2); border-radius:10px; margin-bottom:14px;
+    line-height:1.6;
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="container">
+  <div class="header">
+    <div class="badge">🎮 AI predy 分享会</div>
+    <h1>Prompt 大师<br>段位测试</h1>
+    <p>输入一句 prompt，看看你是什么级别的 Vibe Coder</p>
+  </div>
+  <div class="input-card">
+    <div class="input-label">💬 输入你的 prompt：</div>
+    <textarea class="prompt-input" id="promptInput" placeholder="例：帮我做一个有物理弹射效果的打砖块游戏，砖块碎裂时有粒子爆炸..." maxlength="300"></textarea>
+    <div class="char-count"><span id="charCount">0</span> / 300</div>
+    <div class="examples">
+      <span class="example-tag" onclick="fillExample(this)">做一个打砖块游戏</span>
+      <span class="example-tag" onclick="fillExample(this)">帮我写一个登录页面</span>
+      <span class="example-tag" onclick="fillExample(this)">给薯队长做个大富翁</span>
+      <span class="example-tag" onclick="fillExample(this)">生成一段粒子动画</span>
+    </div>
+  </div>
+  <button class="btn" id="submitBtn" onclick="runEvaluate()">开始测试段位 ⚡</button>
+  <div class="result-card" id="resultCard">
+    <div class="rank-display">
+      <div class="rank-emoji" id="rankEmoji"></div>
+      <div class="rank-name" id="rankName"></div>
+      <div class="rank-sub" id="rankSub"></div>
+    </div>
+    <div class="score-section" id="scoreSection"></div>
+    <div class="comment-box" id="commentBox"></div>
+    <button class="wall-post-btn" id="resultWallPostBtn" onclick="postToWallFromResult()" style="display:none;width:100%;margin-top:10px">🏆 发到墙上，参与评奖</button>
+    <button class="retry-btn" onclick="retry()">🔄 换一个 prompt 再测</button>
+  </div>
+  <div class="leaderboard-hint">
+    期待你的 Vibe ✨ &nbsp;
+    <a href="https://city.xiaohongshu.com/questionnaire/1775032697489" target="_blank">立即报名 AI predy 分享会 →</a>
+  </div>
+
+  <!-- 结果墙 -->
+  <div class="result-wall" id="resultWall">
+    <div class="wall-header">
+      <h3>🏆 结果墙</h3>
+      <span class="wall-count" id="wallCount"></span>
+    </div>
+    <div class="wall-login-area">
+      <button class="hi-login-btn" id="wallLoginBtn" onclick="wallLogin()">🔑 Hi 登录</button>
+      <span class="wall-user-badge" id="wallUserBadge"></span>
+      <button class="wall-post-btn" id="wallPostBtn" onclick="postToWall()">📤 发到墙上</button>
+    </div>
+    <div class="wall-rule">🏆 高分优先规则：如有并列高分，将选择最先发到墙上的同学送出礼物</div>
+    <div class="wall-posted-hint" id="wallPostedHint">✅ 你已经发到墙上了，等待开奖 🎁</div>
+    <div class="wall-grid" id="wallGrid">
+      <div class="wall-empty">加载中...</div>
+    </div>
+  </div>
+</div>
+<script>
+// ⚙️ 后端地址 — 改成你实际部署的地址
+const SHARE_API_BASE = 'http://10.40.124.223:18766';
+
+const RANKS = [
+  { min:90, emoji:'🔥', name:'Vibe 大神', color:'#ff6b35', sub:'你已经超越了 99% 的普通用户', barColor:'linear-gradient(90deg, #ff6b35, #ff2d55)' },
+  { min:75, emoji:'⚡', name:'Prompt 工程师', color:'#a78bfa', sub:'专业级别，稳稳上线没问题', barColor:'linear-gradient(90deg, #7c3aed, #a78bfa)' },
+  { min:58, emoji:'🚀', name:'进阶 Coder', color:'#38bdf8', sub:'思路清晰，再加点细节就满分', barColor:'linear-gradient(90deg, #0284c7, #38bdf8)' },
+  { min:40, emoji:'🌱', name:'潜力新星', color:'#4ade80', sub:'有想法，继续打磨就能起飞', barColor:'linear-gradient(90deg, #16a34a, #4ade80)' },
+  { min:0, emoji:'🐣', name:'青铜 Coder', color:'#fbbf24', sub:'万事开头难，来分享会就对了', barColor:'linear-gradient(90deg, #d97706, #fbbf24)' }
+];
+const DIMENSIONS = [
+  { key:'clarity', label:'指令清晰度', weight:0.30 },
+  { key:'detail', label:'细节丰富度', weight:0.25 },
+  { key:'creativity', label:'创意指数', weight:0.25 },
+  { key:'vibe', label:'Vibe 感', weight:0.20 },
+];
+const COMMENTS = {
+  high: ['细节拉满，AI 收到这条 prompt 会当场感动落泪。粒子、物理、动效全有，上线不是梦。','这条 prompt 已经具备"工程思维"——你不只是在描述需求，你在定义边界。分享会见！','看完这条 prompt，我觉得你已经不需要来分享会了。但还是来吧，认识一下志同道合的人。'],
+  mid: ['方向对了，细节还差一口气。加上"物理效果""性能要求"或"具体风格"，AI 会给你惊喜。','有想法有场景，就是描述还有点抽象。AI 最怕模糊——具体到"什么感觉""什么效果"。','不错的 prompt，但 AI 需要更多"约束"才能给你想要的结果。试试加上尺寸、颜色、交互细节。'],
+  low: ['AI 看完这条 prompt 陷入了沉思……它不知道该从哪下手。来分享会学学怎么"喂"好 AI。','这条 prompt 让 AI 开始自由发挥了，结果可能和你想的完全不一样。具体化是关键！','好消息：你有想法。坏消息：AI 不会读心术。来分享会，学会把想法翻译成 prompt。']
+};
+
+function scorePrompt(text) {
+  const t = text.trim(); const len = t.length;
+  const hasVerb = /做|生成|创建|写|设计|实现|帮我|给我/.test(t);
+  const hasNoun = /游戏|页面|动画|效果|组件|界面|功能|系统/.test(t);
+  let clarity = 30;
+  if (hasVerb) clarity += 25; if (hasNoun) clarity += 25;
+  if (len > 30) clarity += 10; if (len > 80) clarity += 10;
+  clarity = Math.min(clarity, 100);
+  const detailWords = /粒子|物理|弹射|碎裂|颜色|大小|速度|动效|渐变|阴影|圆角|响应式|移动端|流畅|丝滑|炫酷|简洁|极简/.test(t);
+  const hasNumber = /\d+/.test(t);
+  let detail = 20;
+  if (detailWords) detail += 40; if (hasNumber) detail += 20;
+  if (len > 50) detail += 15; if (len > 100) detail += 5;
+  detail = Math.min(detail, 100);
+  const creativeWords = /薯队长|大富翁|打砖块|跑酷|消消乐|弹幕|烟花|随机|procedural|vibe|魔法|科技感|赛博|像素|复古/.test(t);
+  let creativity = 25;
+  if (creativeWords) creativity += 45;
+  if (t.includes('，') || t.includes(',')) creativity += 15;
+  if (len > 60) creativity += 15;
+  creativity = Math.min(creativity, 100);
+  const vibeWords = /牛逼|炸裂|爆炸|超酷|惊艳|漂亮|完美|绝了|有意思|好玩|有趣|感动|震撼/.test(t);
+  let vibe = 30;
+  if (vibeWords) vibe += 35;
+  if (/吧|呢|哦|～|！|!/.test(t)) vibe += 20;
+  if (len > 50) vibe += 15;
+  vibe = Math.min(vibe, 100);
+  const jitter = () => Math.round((Math.random() - 0.5) * 16);
+  return {
+    clarity: Math.min(100, Math.max(10, clarity + jitter())),
+    detail: Math.min(100, Math.max(10, detail + jitter())),
+    creativity: Math.min(100, Math.max(10, creativity + jitter())),
+    vibe: Math.min(100, Math.max(10, vibe + jitter())),
+  };
+}
+function totalScore(s) { return Math.round(DIMENSIONS.reduce((sum, d) => sum + s[d.key] * d.weight, 0)); }
+function getRank(score) { return RANKS.find(r => score >= r.min); }
+function getComment(score) { const pool = score >= 75 ? COMMENTS.high : score >= 45 ? COMMENTS.mid : COMMENTS.low; return pool[Math.floor(Math.random() * pool.length)]; }
+function fakeLoading(ms) { return new Promise(r => setTimeout(r, ms)); }
+let lastResult = null;
+
+async function runEvaluate() {
+  const input = document.getElementById('promptInput');
+  const text = input.value.trim();
+  if (!text || text.length < 5) { input.focus(); input.style.borderColor = 'rgba(255,80,80,0.6)'; setTimeout(() => input.style.borderColor = '', 1000); return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>AI 正在评估你的 Prompt...';
+  document.getElementById('resultCard').classList.remove('show');
+  await fakeLoading(1400 + Math.random() * 600);
+  const scores = scorePrompt(text); const total = totalScore(scores);
+  const rank = getRank(total); const comment = getComment(total);
+  lastResult = { text, scores, total, rank, comment };
+  renderResult(lastResult);
+  btn.disabled = false; btn.innerHTML = '开始测试段位 ⚡';
+}
+
+function renderResult({ scores, total, rank, comment }) {
+  document.getElementById('rankEmoji').textContent = rank.emoji;
+  document.getElementById('rankName').textContent = rank.name;
+  document.getElementById('rankName').style.color = rank.color;
+  document.getElementById('rankSub').textContent = `总分 ${total} 分 · ${rank.sub}`;
+  const section = document.getElementById('scoreSection');
+  section.innerHTML = DIMENSIONS.map(d => `<div class="score-item"><div class="score-row"><span class="score-label">${d.label}</span><span class="score-val" style="color:${rank.color}">${scores[d.key]}</span></div><div class="score-bar"><div class="score-fill" id="fill_${d.key}" style="background:${rank.barColor}"></div></div></div>`).join('');
+  const commentBox = document.getElementById('commentBox');
+  commentBox.textContent = comment; commentBox.style.borderColor = rank.color;
+  document.getElementById('resultCard').classList.add('show');
+  // 如果还没发到墙上，显示发墙按钮
+  if (wallUser) {
+    const wallBtn = document.getElementById("resultWallPostBtn");
+    if (wallBtn) {
+      const alreadyPosted = lastResult._wallPosted;
+      wallBtn.style.display = alreadyPosted ? "none" : "block";
+      wallBtn.textContent = alreadyPosted ? "✅ 已发到墙上" : "🏆 发到墙上，参与评奖";
+    }
+  }
+  setTimeout(() => { DIMENSIONS.forEach(d => { const el = document.getElementById(`fill_${d.key}`); if (el) el.style.width = scores[d.key] + '%'; }); }, 100);
+  document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function retry() {
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('promptInput').value = '';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('promptInput').focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function fillExample(el) {
+  const input = document.getElementById('promptInput');
+  input.value = el.textContent;
+  document.getElementById('charCount').textContent = el.textContent.length;
+  input.focus();
+}
+
+document.getElementById('promptInput').addEventListener('input',function(){document.getElementById('charCount').textContent=this.value.length;});
+document.getElementById('promptInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.metaKey)runEvaluate();});
+function goSignup() { window.open('https://city.xiaohongshu.com/questionnaire/1775032697489','_blank'); }
+
+// ── 结果墙功能 ──
+let wallUser = null; // Hi 登录后的用户信息
+
+// 通过 Hi 内部 API 获取用户信息（从浏览器 cookie）
+async function getHiUserFromBrowser() {
+  const endpoints = [
+    'https://edith.xiaohongshu.com/api/sns/v1/user/selfinfo2',
+    'https://edith.xiaohongshu.com/api/sns/v1/user/selfinfo',
+    'https://edith.xiaohongshu.com/api/sns/v1/user/me',
+    'https://edith.xiaohongshu.com/api/gateway/v1/user/me',
+  ];
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(ep, { credentials: 'include' });
+      if (!res.ok) continue;
+      const data = await res.json();
+      // 尝试不同格式的响应
+      const userInfo = data.data?.user || data.data || data.user || null;
+      if (userInfo && (userInfo.userId || userInfo.user_id || userInfo.nickname)) {
+        return {
+          nickname: userInfo.nickname || userInfo.user_info?.nickname || 'Hi用户',
+          userId: userInfo.userId || userInfo.user_id || userInfo.redid || '',
+          avatar: userInfo.images?.headv1 || userInfo.avatar || userInfo.image || ''
+        };
+      }
+    } catch(e) { /* 端点不通，试下一个 */ }
+  }
+  return null;
+}
+
+async function wallLogin() {
+  const btn = document.getElementById('wallLoginBtn');
+  btn.textContent = '登录中...'; btn.disabled = true;
+  
+  // 先尝试从浏览器 Hi cookie 获取
+  const hiUser = await getHiUserFromBrowser();
+  if (hiUser && hiUser.userId) {
+    wallUser = hiUser;
+    btn.style.display = 'none';
+    document.getElementById('wallUserBadge').textContent = '✅ ' + hiUser.nickname;
+    document.getElementById('wallUserBadge').classList.add('show');
+    checkWallPosted();
+    return;
+  }
+  
+  // 浏览器 Hi cookie 获取失败，弹框手动输入
+  btn.textContent = 'Hi 登录未检测到，请手动输入';
+  btn.disabled = false;
+  const nickname = prompt('请在 Hi 登录状态下重试，或手动输入你的薯名：');
+  if (nickname && nickname.trim()) {
+    wallUser = { nickname: nickname.trim(), userId: nickname.trim(), avatar: '' };
+    btn.style.display = 'none';
+    document.getElementById('wallUserBadge').textContent = '👤 ' + nickname.trim();
+    document.getElementById('wallUserBadge').classList.add('show');
+    checkWallPosted();
+  }
+}
+
+async function checkWallPosted() {
+  if (!wallUser) return;
+  try {
+    const res = await fetch(SHARE_API_BASE + '/api/wall');
+    const data = await res.json();
+    if (data.ok && data.data.some(w => w.userId === wallUser.userId)) {
+      document.getElementById('wallPostBtn').style.display = 'none';
+      document.getElementById('wallPostedHint').classList.add('show');
+    } else {
+      document.getElementById('wallPostBtn').classList.add('show');
+    }
+  } catch(e) {}
+}
+
+// 从结果卡片直接发墙
+function postToWallFromResult() {
+  if (!wallUser) {
+    wallLogin();
+    return;
+  }
+  postToWall();
+}
+
+async function postToWall() {
+  if (!wallUser) { alert('请先 Hi 登录'); return; }
+  if (!lastResult) { alert('请先测试段位'); return; }
+  const btn = document.getElementById('wallPostBtn');
+  btn.textContent = '发送中...'; btn.disabled = true;
+  try {
+    const scoresArr = DIMENSIONS.map(d => ({ label: d.label, value: lastResult.scores[d.key] }));
+    const res = await fetch(SHARE_API_BASE + '/api/wall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: lastResult.text, scores: scoresArr,
+        total: lastResult.total, rank: lastResult.rank, comment: lastResult.comment,
+        // 前端传来的 Hi 用户信息
+        hiUserId: wallUser.userId,
+        hiNickName: wallUser.nickname,
+        hiAvatar: wallUser.avatar || ''
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      btn.style.display = 'none';
+      document.getElementById('wallPostedHint').classList.add('show');
+      loadWall();
+    } else {
+      alert(data.error || '发送失败');
+    }
+  } catch(e) {
+    alert('网络错误：' + e.message);
+  }
+  btn.textContent = '📤 发到墙上'; btn.disabled = false;
+}
+
+function renderWall(posts) {
+  const grid = document.getElementById('wallGrid');
+  document.getElementById('wallCount').textContent = posts.length > 0 ? posts.length + ' 人已发' : '';
+  if (posts.length === 0) {
+    grid.innerHTML = '<div class="wall-empty">还没有人发到墙上，来做第一个吧 🎉</div>';
+    return;
+  }
+  grid.innerHTML = posts.map(w => `
+    <div class="wall-card">
+      <div class="wall-card-top">
+        <div class="wall-card-avatar">${w.avatar ? '<img src="'+w.avatar+'" onerror="this.parentElement.innerHTML=\'🦀\'"/>' : '🦀'}</div>
+        <span class="wall-card-name">${esc(w.nickname)}</span>
+        <span class="wall-card-time">${w.time}</span>
+      </div>
+      <div class="wall-card-rank">
+        <span class="wall-card-rank-emoji">${w.rank.emoji}</span>
+        <span class="wall-card-rank-name" style="color:${w.rank.color}">${w.rank.name}</span>
+        <span class="wall-card-rank-total">${w.total}分</span>
+      </div>
+      <div class="wall-card-prompt">${esc(w.text)}</div>
+      <div class="wall-card-scores">
+        ${(w.scores||[]).map(s => `<div class="wall-card-score">${s.label} <span>${s.value}</span></div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function loadWall() {
+  try {
+    const res = await fetch(SHARE_API_BASE + '/api/wall');
+    const data = await res.json();
+    if (data.ok) renderWall(data.data);
+  } catch(e) {
+    document.getElementById('wallGrid').innerHTML = '<div class="wall-empty">加载失败，请稍后重试</div>';
+  }
+}
+
+// 页面加载时获取结果墙
+loadWall();
+</script>
+</body>
+</html>
